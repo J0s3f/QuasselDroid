@@ -144,6 +144,11 @@ public class ChatActivity extends Activity{
 
 		private void openUrl(String url) {
 			try {
+				if (url.indexOf("://") == -1) {
+					// We match URLs without a scheme, assuming them to be HTTP, but Android requires a scheme to be present
+					url = "http://" + url;
+				}
+				
 				Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
 				startActivity(browserIntent);
 			} catch (ActivityNotFoundException ex) {
