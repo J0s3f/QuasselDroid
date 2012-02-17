@@ -3,10 +3,9 @@
   	<uses-sdk android:minSdkVersion="7" />
   	<uses-permission android:name="android.permission.VIBRATE"></uses-permission>
   	<uses-permission android:name="android.permission.WAKE_LOCK"></uses-permission>
-	<application android:icon="@drawable/icon" android:label="@string/app_name" android:description="@string/description" android:debuggable="true" android:theme="@android:style/Theme.Light">
-
-
-
+	<uses-permission android:name="android.permission.INTERNET"></uses-permission>
+	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"></uses-permission>
+  	<application android:icon="@drawable/icon" android:label="@string/app_name" android:description="@string/description" android:debuggable="true" android:theme="@android:style/Theme.Light">
 		<activity android:name=".gui.LoginActivity" android:label="@string/app_name" android:windowSoftInputMode="stateHidden">
 			<intent-filter>
 				<action android:name="android.intent.action.MAIN" />
@@ -33,6 +32,4 @@
 		<service android:name=".service.CoreConnService"></service>
 		<activity android:name=".gui.NicksActivity"></activity>
 	</application>
-	<uses-permission android:name="android.permission.INTERNET"></uses-permission>
-<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"></uses-permission>
 </manifest> 
