@@ -31,11 +31,14 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.graphics.Typeface;
+import android.os.BatteryManager;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.Handler;
@@ -52,6 +55,8 @@ import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
 import android.text.style.UnderlineSpan;
 import android.util.Log;
+import android.view.Window;
+import android.view.WindowManager;
 
 import com.iskrembilen.quasseldroid.Buffer;
 import com.iskrembilen.quasseldroid.BufferInfo;
@@ -155,8 +160,11 @@ public class CoreConnService extends Service {
 	private OnSharedPreferenceChangeListener preferenceListener;
 
 	private boolean preferenceUseWakeLock;
+	private boolean preferenceKeepScreenOn;
 
+	private boolean onExtPower = false;
 	private WakeLock wakeLock;
+	private Window lastWindowUsed;
 
 	/**
 	 * Class for clients to access. Because we know this service always runs in
@@ -186,6 +194,7 @@ public class CoreConnService extends Service {
 		preferences = PreferenceManager.getDefaultSharedPreferences(this);
 		preferenceParseColors = preferences.getBoolean(getString(R.string.preference_colored_text), false);
 		preferenceUseWakeLock = preferences.getBoolean(getString(R.string.preference_wake_lock), true);
+		preferenceKeepScreenOn = preferences.getBoolean(getString(R.string.preference_keep_screen_on), true);
 		preferenceListener = new OnSharedPreferenceChangeListener() {
 			
 			@Override
@@ -195,13 +204,43 @@ public class CoreConnService extends Service {
 				} else if(key.equals(getString(R.string.preference_wake_lock))) {
 					preferenceUseWakeLock = preferences.getBoolean(getString(R.string.preference_wake_lock), true);
 					if(!preferenceUseWakeLock) releaseWakeLockIfExists();
-					else if(preferenceUseWakeLock && isConnected()) acquireWakeLockIfEnabled();
+					else if(preferenceUseWakeLock) acquireWakeLockIfEnabled();
+				} else if(key.equals(getString(R.string.preference_keep_screen_on))) {
+					preferenceKeepScreenOn = preferences.getBoolean(getString(R.string.preference_keep_screen_on), true);
+					clearKeepScreenOnFlag(lastWindowUsed);
+					keepScreenOnIfEnabled(lastWindowUsed);
 				}
 			}
 		};
 		preferences.registerOnSharedPreferenceChangeListener(preferenceListener);
 		statusReceivers = new ArrayList<ResultReceiver>();
+		
+		this.registerReceiver(this.batteryStatusReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
 	}
+	
+
+	private BroadcastReceiver batteryStatusReceiver = new BroadcastReceiver() {
+		@Override
+		public void onReceive(Context context, Intent intent) {
+			if (intent.getAction().equals(Intent.ACTION_BATTERY_CHANGED)) {
+				boolean oldStatus = onExtPower;
+				int newStatus = intent.getIntExtra("status", BatteryManager.BATTERY_STATUS_UNKNOWN);
+				if (newStatus == BatteryManager.BATTERY_STATUS_CHARGING || newStatus == BatteryManager.BATTERY_STATUS_FULL) {
+					if (oldStatus == false) {
+						onExtPower = true;
+						Log.i(TAG, "Now on external power");
+						keepScreenOnIfEnabled(lastWindowUsed);
+					}
+				} else {
+					if (oldStatus == true) {
+						onExtPower = false;
+						Log.i(TAG, "Now on battery power");
+						clearKeepScreenOnFlag(lastWindowUsed);
+					}
+				}
+			}
+		}
+	};
 
 	@Override
 	public void onDestroy() {
@@ -248,7 +287,7 @@ public class CoreConnService extends Service {
 	}
 
 	private void acquireWakeLockIfEnabled() {
-		if (preferenceUseWakeLock) {
+		if (preferenceUseWakeLock && isConnected()) {
 			PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
 			wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Heute ist mein tag");
 			wakeLock.acquire();
@@ -261,6 +300,25 @@ public class CoreConnService extends Service {
 			Log.i(TAG, "WakeLock released");
 		}
 		wakeLock = null;
+	}
+	
+	public void keepScreenOnIfEnabled(Window window) {
+		if (window == null)
+			return;
+		
+		lastWindowUsed = window;
+		if (preferenceKeepScreenOn) {
+			Log.i(TAG, "Setting KEEP_SCREEN_ON flag");
+			window.setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON, WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+		}
+	}
+	public void clearKeepScreenOnFlag(Window window) {
+		if (window == null)
+			return;
+		
+		lastWindowUsed = window;
+		Log.i(TAG, "Clearing KEEP_SCREEN_ON flag");
+		window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 	}
 
 	public void sendMessage(int bufferId, String message) {

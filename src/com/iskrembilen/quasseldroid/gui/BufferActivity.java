@@ -124,6 +124,7 @@ public class BufferActivity extends ExpandableListActivity {
 					setListAdapter(bufferListAdapter);
 					bufferListAdapter.setNetworks(boundConnService.getNetworkList(bufferListAdapter));
 					handleIntent(getIntent());
+					boundConnService.keepScreenOnIfEnabled(getWindow());
 				} else if (resultCode==CoreConnService.CONNECTION_CONNECTED) {
 					if (boundConnService.isInitComplete()) {
 						handleIntent(getIntent());
@@ -152,6 +153,8 @@ public class BufferActivity extends ExpandableListActivity {
 	protected void onResume() {
 		super.onResume();
 		if (boundConnService == null) return;
+		
+		boundConnService.keepScreenOnIfEnabled(getWindow());
 	}
 	
 	@Override

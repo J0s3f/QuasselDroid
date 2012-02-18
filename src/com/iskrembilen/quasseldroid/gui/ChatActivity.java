@@ -446,6 +446,15 @@ public class ChatActivity extends Activity{
 		dynamicBacklogAmout = Integer.parseInt(preferences.getString(getString(R.string.preference_dynamic_backlog), "10"));
 		doBindService();
 	}
+	
+	@Override
+	protected void onResume() {
+		super.onResume();
+		
+		if (boundConnService != null) {
+			boundConnService.keepScreenOnIfEnabled(getWindow());
+		}
+	}
 
 	@Override
 	protected void onStop() {
