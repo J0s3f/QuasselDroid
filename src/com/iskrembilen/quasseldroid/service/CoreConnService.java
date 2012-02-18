@@ -26,6 +26,7 @@ package com.iskrembilen.quasseldroid.service;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Hashtable;
 import java.util.Observer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -165,7 +166,9 @@ public class CoreConnService extends Service {
 	private boolean onExtPower = false;
 	private WakeLock wakeLock;
 	private Window lastWindowUsed;
-
+	
+	private Hashtable<Integer, ArrayList<String>> sentMessages = new Hashtable<Integer, ArrayList<String>>();
+	
 	/**
 	 * Class for clients to access. Because we know this service always runs in
 	 * the same process as its clients, we don't need to deal with IPC.
@@ -323,6 +326,59 @@ public class CoreConnService extends Service {
 
 	public void sendMessage(int bufferId, String message) {
 		coreConn.sendMessage(bufferId, message);
+		addMessageToSentHistory(bufferId, message);
+	}
+	
+	public void addMessageToSentHistory(int bufferId, String message) {
+		if (message.length() == 0)
+			return;
+		
+		ArrayList<String> sentMessagesForBuffer;
+		if (sentMessages.containsKey(bufferId)) {
+			Log.d(TAG, "Fetched existing sent messages history for Buffer ID #" + bufferId);
+			sentMessagesForBuffer = sentMessages.get(bufferId);
+		} else {
+			Log.d(TAG, "Creating new sent messages history for Buffer ID #" + bufferId);
+			sentMessagesForBuffer = new ArrayList<String>();
+			sentMessages.put(bufferId, sentMessagesForBuffer);
+		}
+		
+		if (sentMessagesForBuffer.size() == 0 || !message.equals(sentMessagesForBuffer.get(sentMessagesForBuffer.size()-1))) {
+			// Don't add the message if it's already the last in the list
+			Log.d(TAG, "Adding message to history: " + message);
+			sentMessagesForBuffer.add(message);
+		}
+		
+		// Should probably do some size-limiting of the history, here...
+	}
+	
+	public String getSentMessage(int bufferId, int messageOffset) {
+		Log.d(TAG, "Requested sent message for buffer #" + bufferId + " with offset " + messageOffset);
+		if (!sentMessages.containsKey(bufferId) || messageOffset >= 0)
+			return null;
+		
+		ArrayList<String> sentMessagesForBuffer = sentMessages.get(bufferId);
+		if (sentMessagesForBuffer.size() < -messageOffset) {
+			// Requesting a message that doesn't exist
+			return null;
+		}
+		
+		String out = sentMessagesForBuffer.get(sentMessagesForBuffer.size() + messageOffset);
+		Log.d(TAG, "Returning sent message: " + out);
+		return out;
+	}
+	
+	public void changeMessageInSentHistory(int bufferId, int messageOffset, String message) {
+		Log.d(TAG, "Changing sent message for buffer #" + bufferId + " with offset " + messageOffset + " to string: " + message);
+		if (!sentMessages.containsKey(bufferId) || messageOffset >= 0 || message.length() == 0)
+			return;
+		
+		ArrayList<String> sentMessagesForBuffer = sentMessages.get(bufferId);
+		if (sentMessagesForBuffer.size() < -messageOffset) {
+			return;
+		}
+		
+		sentMessagesForBuffer.set(sentMessagesForBuffer.size() + messageOffset, message);
 	}
 
 	public void markBufferAsRead(int bufferId) {

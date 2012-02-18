@@ -106,6 +106,9 @@ public class ChatActivity extends Activity{
 	SharedPreferences preferences;
 
 	private ResultReceiver statusReceiver;
+	
+	private int sentMessageHistoryViewIndex = 0;
+	private String sentMessageHistoryLastRequestedMessage = "";
 
 	private static final String TAG = ChatActivity.class.getSimpleName();
 
@@ -304,18 +307,64 @@ public class ChatActivity extends Activity{
 
 	private OnKeyListener inputfieldKeyListener =  new View.OnKeyListener() {
 		public boolean onKey(View v, int keyCode, KeyEvent event) {
+			int bufferId = adapter.buffer.getInfo().id;
+			
 			if (keyCode == KeyEvent.KEYCODE_ENTER && event.getAction()==KeyEvent.ACTION_DOWN ) { //On key down as well
 				EditText inputfield = (EditText)findViewById(R.id.ChatInputView);
 				String inputText = inputfield.getText().toString();
 
 				if ( ! "".equals(inputText) ) {
-					boundConnService.sendMessage(adapter.buffer.getInfo().id, inputText);
+					boundConnService.sendMessage(bufferId, inputText);
+					sentMessageHistoryViewIndex = 0;
 					inputfield.setText("");
 				}
 
 				return true;
 			} else if (keyCode == KeyEvent.KEYCODE_TAB && event.getAction() == KeyEvent.ACTION_DOWN) {
 				onSearchRequested(); // lawl
+				return true;
+			} else if (keyCode == KeyEvent.KEYCODE_DPAD_UP && event.getAction() == KeyEvent.ACTION_DOWN) {
+				String oldMessage = boundConnService.getSentMessage(bufferId, --sentMessageHistoryViewIndex);
+				if (oldMessage == null) {
+					++sentMessageHistoryViewIndex;
+					sentMessageHistoryLastRequestedMessage = "";
+				} else {
+					EditText inputfield = (EditText) findViewById(R.id.ChatInputView);
+					if (inputfield.getText().length() > 0 && sentMessageHistoryViewIndex == -1) {
+						// This is our first move into the history, so store the existing message in the list;
+						boundConnService.addMessageToSentHistory(bufferId, inputfield.getText().toString());
+					} else if (sentMessageHistoryViewIndex < -1 && inputfield.getText().length() > 0 &&
+							!sentMessageHistoryLastRequestedMessage.equals(inputfield.getText().toString())) {
+						// The message in the text box has been modified, so we'd better save that, too
+						boundConnService.changeMessageInSentHistory(bufferId, sentMessageHistoryViewIndex + 1, inputfield.getText().toString());
+					}
+					inputfield.setText(oldMessage);
+					sentMessageHistoryLastRequestedMessage = oldMessage;
+				}
+				return true;
+			} else if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN && event.getAction() == KeyEvent.ACTION_DOWN) {
+				EditText inputfield = (EditText) findViewById(R.id.ChatInputView);
+				if (inputfield.getText().length() > 0 && sentMessageHistoryViewIndex == 0) {
+					// Pressing down when not already viewing the history causes the current message
+					//  to be sent to the history and the input area to be blanked
+					boundConnService.addMessageToSentHistory(bufferId, inputfield.getText().toString());
+					inputfield.setText("");
+				} else {
+					if (!sentMessageHistoryLastRequestedMessage.equals(inputfield.getText().toString())) {
+						// The message in the text box has been modified, so we'd better save that
+						boundConnService.changeMessageInSentHistory(bufferId, sentMessageHistoryViewIndex, inputfield.getText().toString());
+					}
+					
+					String oldMessage = boundConnService.getSentMessage(bufferId, ++sentMessageHistoryViewIndex);
+					if (oldMessage == null) {
+						// Reached the "bottom" (most recent) of the list
+						inputfield.setText("");
+						sentMessageHistoryViewIndex = 0;
+						sentMessageHistoryLastRequestedMessage = "";
+					} else {
+						inputfield.setText(oldMessage);
+					}
+				}
 				return true;
 			}
 			return false;
