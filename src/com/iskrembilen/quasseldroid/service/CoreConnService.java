@@ -426,7 +426,7 @@ public class CoreConnService extends Service {
 	 *            the message to check
 	 */
 	public void checkMessageForHighlight(Buffer buffer, IrcMessage message) {
-		if (message.type == IrcMessage.Type.Plain) {
+		if (message.type == IrcMessage.Type.Plain || message.type == IrcMessage.Type.Action) {
 			String nick = networks.getNetworkById(buffer.getInfo().networkId).getNick();
 			if(nick == null) {
 				Log.e(TAG, "Nick is null in check message for highlight");
