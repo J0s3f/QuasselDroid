@@ -109,6 +109,8 @@ public class ChatActivity extends Activity{
 	
 	private int sentMessageHistoryViewIndex = 0;
 	private String sentMessageHistoryLastRequestedMessage = "";
+	
+	private static String storedInputText = "";
 
 	private static final String TAG = ChatActivity.class.getSimpleName();
 
@@ -378,6 +380,7 @@ public class ChatActivity extends Activity{
 		Intent i = new Intent(ChatActivity.this, ChatActivity.class);
 		i.putExtra(BufferActivity.BUFFER_ID_EXTRA, buffer.getInfo().id);
 		i.putExtra(BufferActivity.BUFFER_NAME_EXTRA, buffer.getInfo().name);
+		
 		startActivity(i);
 	}
 	
@@ -500,9 +503,21 @@ public class ChatActivity extends Activity{
 	protected void onResume() {
 		super.onResume();
 		
+		EditText inputArea = (EditText) findViewById(R.id.ChatInputView);
+		if (storedInputText.length() > 0 && inputArea.getText().toString().length() == 0) {
+			inputArea.setText(storedInputText);
+		}
+		
 		if (boundConnService != null) {
 			boundConnService.keepScreenOnIfEnabled(getWindow());
 		}
+	}
+	
+	@Override
+	protected void onPause() {
+		super.onPause();
+		
+		storedInputText = ((EditText) findViewById(R.id.ChatInputView)).getText().toString();
 	}
 
 	@Override

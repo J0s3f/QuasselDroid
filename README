@@ -36,6 +36,11 @@ connect to your Quassel core using your Android (TM) phone.
 |  * Added an option to keep the screen turned on (and bright) when the
 |    device is connected to an external power source (e.g. when the phone is
 |    in a desk dock).
+|  * Remembers the messages you've sent on a per-buffer basis, allowing
+|    access to them via the up/down arrow keys. Will also remember these
+|    messages across disconnections (no more losing messages you've typed
+|    when your phone loses signal!)
+|  * Also keeps typed-but-not-sent messages when you switch between chats.
 +------------------------------------------------------------------------------
 
 No requirements apart from a recently modern Android SDK (2.1 should be
