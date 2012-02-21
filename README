@@ -21,6 +21,10 @@ connect to your Quassel core using your Android (TM) phone.
 |  not likely to want to put much effort into things that won't directly
 |  benefit us.
 | 
+| ADDITIONAL AUTHORS:
+|  * Andrew Gillard (Aziraphale)
+|  * Ben Roberts (optiz0r)
+| 
 | Here is what we've added/changed so far:
 |  * Action (/me) messages will now be considered "normal messages" (blue) in
 |    the list of buffers, rather than them being treated like mode changes.
