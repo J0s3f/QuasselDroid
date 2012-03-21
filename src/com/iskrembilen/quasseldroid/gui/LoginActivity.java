@@ -151,7 +151,7 @@ public class LoginActivity extends Activity implements Observer, DialogInterface
 
 			@Override
 			protected void onReceiveResult(int resultCode, Bundle resultData) {
-				if (resultCode==CoreConnService.CONNECTION_CONNECTED) {
+				if (resultCode==CoreConnService.CONNECTION_CONNECTING) {
 					removeDialog(R.id.DIALOG_CONNECTING);
 					Intent bufferIntent = new Intent(LoginActivity.this, BufferActivity.class);
 					if (sharedString != null && sharedString.length() > 0) {

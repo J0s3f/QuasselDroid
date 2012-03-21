@@ -89,6 +89,7 @@ public class CoreConnService extends Service {
 	public static final int UNSUPPORTED_PROTOCOL = 3;
 	public static final int INIT_PROGRESS = 4;
 	public static final int INIT_DONE = 5;
+	public static final int CONNECTION_CONNECTING = 6;
 
 	public static final String STATUS_KEY = "status";
 	public static final String CERT_KEY = "certificate";
@@ -814,9 +815,8 @@ public class CoreConnService extends Service {
 				 */
 				buffer = networks.getBufferById(msg.arg1);
 				if (buffer != null) {
-					Boolean hasHighlights = buffer.hasUnseenHighlight();
 					buffer.setLastSeenMessage(msg.arg2);
-					if(hasHighlights)
+					if(buffer.hasUnseenHighlight())
 						notificationManager.notifyHighlightsRead(buffer.getInfo().id);
 				} else {
 					Log.e(TAG, "Getting set last seen message on unknown buffer: " + msg.arg1);
@@ -834,14 +834,16 @@ public class CoreConnService extends Service {
 				}
 				break;
 
-			case R.id.CONNECTED:
+
+			case R.id.CONNECTING:
 				/**
 				 * CoreConn has connected to a core
 				 */
-				notificationManager.notifyConnected();
-				sendStatusMessage(CoreConnService.CONNECTION_CONNECTED, null);
+				notificationManager.notifyConnecting();
+				sendStatusMessage(CoreConnService.CONNECTION_CONNECTING, null);
 				break;
 
+				
 			case R.id.LOST_CONNECTION:
 				/**
 				 * Lost connection with core, update notification
@@ -936,6 +938,10 @@ public class CoreConnService extends Service {
 				sendStatusMessage(CoreConnService.INIT_PROGRESS, bundle);
 				break;
 			case R.id.INIT_DONE:
+				/**
+				 * CoreConn has connected to a core
+				 */
+				notificationManager.notifyConnected();
 				sendStatusMessage(CoreConnService.INIT_DONE, null);
 				break;
 			case R.id.USER_PARTED:
