@@ -857,7 +857,11 @@ public class CoreConnService extends Service {
 				ArrayList<Integer> b = ((Bundle)msg.obj).getIntegerArrayList("buffers");
 				ArrayList<Integer> c = new ArrayList<Integer>();
 				for(Network net : networks.getNetworkList()) {
-					c.add(net.getStatusBuffer().getInfo().id);
+					try {
+						c.add(net.getStatusBuffer().getInfo().id);
+					} catch (NullPointerException ex) {
+						// Not connected; never been connected; thus no status buffer
+					}
 					for(Buffer buf : net.getBuffers().getRawBufferList()) {
 						if(buf.getInfo().id == 4) System.out.println(buf.getInfo().name);
 						c.add(buf.getInfo().id);
@@ -956,7 +960,9 @@ public class CoreConnService extends Service {
 				}
 				bundle = (Bundle) msg.obj;
 				user = networks.getNetworkById(msg.arg1).getUserByNick(bundle.getString("oldNick"));
-				user.changeNick(bundle.getString("newNick"));
+				if (user != null) {
+					user.changeNick(bundle.getString("newNick"));
+				}
 				break;
 			case R.id.USER_ADD_MODE:
 				if (networks.getNetworkById(msg.arg1) == null) {
