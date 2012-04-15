@@ -23,24 +23,29 @@ public class QuasseldroidNotificationManager {
 	private SharedPreferences preferences;
 	private List<Integer> highlightedBuffers;
 	NotificationManager notifyManager;
+	private boolean notified;
 
 	public QuasseldroidNotificationManager(Context context) {
 		this.context = context;
 		preferences = PreferenceManager.getDefaultSharedPreferences(context);
 		notifyManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 		highlightedBuffers = new ArrayList<Integer>();
+		notified = false;
 	}
 
 	public void notifyHighlightsRead(int bufferId) {
 		highlightedBuffers.remove((Integer)bufferId);
 		if(highlightedBuffers.size() == 0) {
 			CharSequence text = context.getText(R.string.notification_connected);
+			CharSequence ticker = (notified) ? "" : text;
+			
 			int icon = R.drawable.icon;
 			int temp_flags = Notification.FLAG_ONGOING_EVENT;			
 
 			// Set the icon, scrolling text and timestamp
-			Notification notification = new Notification(icon, text, System.currentTimeMillis());
+			Notification notification = new Notification(icon, ticker, System.currentTimeMillis());
 			notification.flags |= temp_flags;
+			notification.number = 0;
 
 			// The PendingIntent to launch our activity if the user selects this notification
 			PendingIntent contentIntent;
@@ -55,6 +60,7 @@ public class QuasseldroidNotificationManager {
 
 			// Send the notification.
 			notifyManager.notify(R.id.NOTIFICATION, notification);
+			notified = true;
 		}else{
 			notifyHighlight(null);
 		}
@@ -62,13 +68,14 @@ public class QuasseldroidNotificationManager {
 
 	public void notifyConnected() {
 		CharSequence text = context.getText(R.string.notification_connected);
+		CharSequence ticker = (notified) ? "" : text;
 		int icon = R.drawable.icon;
 		int temp_flags = Notification.FLAG_ONGOING_EVENT;			
 
 		// Set the icon, scrolling text and timestamp
-		Notification notification = new Notification(icon, text, System.currentTimeMillis());
+		Notification notification = new Notification(icon, ticker, System.currentTimeMillis());
 		notification.flags |= temp_flags;
-		
+		notification.number = highlightedBuffers.size();
 		
 		if (preferences.getBoolean(context.getString(R.string.preference_notify_connect), false)) {
 			if (preferences.getBoolean(context.getString(R.string.preference_notification_vibrate), true)) {
@@ -93,21 +100,21 @@ public class QuasseldroidNotificationManager {
 		notification.setLatestEventInfo(context, context.getText(R.string.app_name), text,
 				contentIntent);
 		
-	
-
-
 		// Send the notification.
 		notifyManager.notify(R.id.NOTIFICATION, notification);
+		notified = true;
 	}
 	
 	public void notifyConnecting() {
 		CharSequence text = context.getText(R.string.notification_connecting);
+		CharSequence ticker = (notified) ? "" : text;
 		int icon = R.drawable.connecting;
 		int temp_flags = Notification.FLAG_ONGOING_EVENT;			
 
 		// Set the icon, scrolling text and timestamp
-		Notification notification = new Notification(icon, text, System.currentTimeMillis());
+		Notification notification = new Notification(icon, ticker, System.currentTimeMillis());
 		notification.flags |= temp_flags;
+		notification.number = 1;
 		// The PendingIntent to launch our activity if the user selects this notification
 		PendingIntent contentIntent;
 
@@ -121,6 +128,7 @@ public class QuasseldroidNotificationManager {
 
 		// Send the notification.
 		notifyManager.notify(R.id.NOTIFICATION, notification);
+		notified = true;
 	}	
 
 	public void notifyHighlight(Integer bufferId) {
@@ -129,12 +137,14 @@ public class QuasseldroidNotificationManager {
 		}
 
 		CharSequence text = "You have highlights on " + highlightedBuffers.size() + " buffers";
+		CharSequence ticker = (notified) ? "" : text;
 		int icon = R.drawable.highlight;
 		int temp_flags = Notification.FLAG_ONGOING_EVENT;			
 
 		// Set the icon, scrolling text and timestamp
-		Notification notification = new Notification(icon, text, System.currentTimeMillis());
+		Notification notification = new Notification(icon, ticker, System.currentTimeMillis());
 		notification.flags |= temp_flags;
+		notification.number = highlightedBuffers.size();
 		// The PendingIntent to launch our activity if the user selects this notification
 		PendingIntent contentIntent;
 
@@ -158,16 +168,19 @@ public class QuasseldroidNotificationManager {
 		}
 		// Send the notification.
 		notifyManager.notify(R.id.NOTIFICATION, notification);
+		notified = true;
 	}
 
 	public void notifyDisconnected() {
 		CharSequence text = context.getText(R.string.notification_disconnected);
+		CharSequence ticker = (notified) ? "" : text;
 		int icon = R.drawable.inactive;
 		int temp_flags = Notification.FLAG_ONLY_ALERT_ONCE;
 
 		// Set the icon, scrolling text and timestamp
-		Notification notification = new Notification(icon, text, System.currentTimeMillis());
+		Notification notification = new Notification(icon, ticker, System.currentTimeMillis());
 		notification.flags |= temp_flags;
+		notification.number = 1;
 		// The PendingIntent to launch our activity if the user selects this notification
 		PendingIntent contentIntent;
 
@@ -179,5 +192,6 @@ public class QuasseldroidNotificationManager {
 				contentIntent);
 		// Send the notification.
 		notifyManager.notify(R.id.NOTIFICATION, notification);
+		notified = true;
 	}
 }
