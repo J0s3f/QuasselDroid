@@ -151,11 +151,10 @@ public class LoginActivity extends Activity implements Observer, DialogInterface
 
 			@Override
 			protected void onReceiveResult(int resultCode, Bundle resultData) {
-				if (resultCode==CoreConnService.CONNECTION_CONNECTED) {
-					// Already connected (probably the app being launched again while already connected)
-					LoginActivity.this.startActivity(new Intent(LoginActivity.this, BufferActivity.class));
-				} else if (resultCode==CoreConnService.CONNECTION_CONNECTING) {
-					removeDialog(R.id.DIALOG_CONNECTING);
+				if (resultCode==CoreConnService.CONNECTION_CONNECTED || 
+						resultCode==CoreConnService.CONNECTION_CONNECTING) {
+					// Just connected or already connected (probably the 
+					//  app being launched again while already connected)
 					Intent bufferIntent = new Intent(LoginActivity.this, BufferActivity.class);
 					if (sharedString != null && sharedString.length() > 0) {
 						bufferIntent.putExtra(BufferActivity.BUFFER_SHARE_EXTRA_TEXT, sharedString);
@@ -164,6 +163,11 @@ public class LoginActivity extends Activity implements Observer, DialogInterface
 					}
 					sharedString = null;
 					sharedUri = null;
+					
+					if (resultCode==CoreConnService.CONNECTION_CONNECTING) {
+						// Remove the dialog if we've just finished connecting
+						removeDialog(R.id.DIALOG_CONNECTING);
+					}
 					LoginActivity.this.startActivity(bufferIntent);
 				}else if (resultCode==CoreConnService.CONNECTION_DISCONNECTED) {
 					if (resultData!=null){
