@@ -69,7 +69,6 @@ public class QVariant<T extends Object>{
 			
 		}
 		@SuppressWarnings("unchecked")
-		@Override
 		public QVariant<U> unserialize(QDataInputStream src, DataStreamVersion version) throws IOException, EmptyQVariantException{	    
 			int type = (int)src.readUInt(32);
 			if (version.getValue() < DataStreamVersion.Qt_4_0.getValue()) {
@@ -122,7 +121,6 @@ public class QVariant<T extends Object>{
 		}
 
 		@SuppressWarnings("unchecked")
-		@Override
 		public void serialize(QDataOutputStream stream, QVariant<U> data, DataStreamVersion version) throws IOException {
 			stream.writeUInt(data.type.getValue(), 32);
 			if (version.getValue() < DataStreamVersion.Qt_4_0.getValue()) {
@@ -146,6 +144,7 @@ public class QVariant<T extends Object>{
 		//TODO: Implement user types
 	}
 	
+	@Override
 	public String toString() {
 		switch (type) {
 		case ByteArray:

@@ -1,6 +1,5 @@
 package com.iskrembilen.quasseldroid;
 
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -8,8 +7,6 @@ import java.util.Observable;
 import java.util.Observer;
 
 import android.util.Log;
-
-import com.iskrembilen.quasseldroid.BufferInfo.Type;
 
 public class UserCollection extends Observable implements Observer {
 
@@ -102,7 +99,6 @@ public class UserCollection extends Observable implements Observer {
 		return operators;
 	}
 
-	@Override
 	public void update(Observable observable, Object data) {
 		Collections.sort(users);
 		Collections.sort(voiced);

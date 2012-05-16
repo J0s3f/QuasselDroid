@@ -42,6 +42,7 @@ public class NetworkServer {
 		this.proxyPassword = proxyPassword;
 	}
 	
+	@Override
 	public String toString() {
 		return ""+this.host+":"+this.port;
 	}

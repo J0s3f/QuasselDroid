@@ -91,7 +91,6 @@ public class Network extends Observable implements Observer, Comparable<Network>
 	}
 
 
-	@Override
 	public void update(Observable observable, Object data) {
 		setChanged();
 		notifyObservers();
@@ -99,7 +98,6 @@ public class Network extends Observable implements Observer, Comparable<Network>
 	}
 
 
-	@Override
 	public int compareTo(Network another) {
 		return getId() - another.getId();
 	}

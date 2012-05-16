@@ -23,55 +23,30 @@
 
 package com.iskrembilen.quasseldroid.gui;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
 
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.Dialog;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.DialogInterface;
-import android.content.DialogInterface.OnMultiChoiceClickListener;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.content.SharedPreferences;
-import android.graphics.Color;
-import android.graphics.Typeface;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.ResultReceiver;
-import android.preference.PreferenceManager;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
-import android.view.View.OnKeyListener;
 import android.view.ViewGroup;
 import android.view.Window;
-import android.widget.AbsListView;
-import android.widget.AbsListView.OnScrollListener;
-import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemLongClickListener;
-import android.widget.BaseAdapter;
 import android.widget.BaseExpandableListAdapter;
-import android.widget.EditText;
 import android.widget.ExpandableListView;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.ListView;
 import android.widget.TextView;
 
 import com.iskrembilen.quasseldroid.Buffer;
-import com.iskrembilen.quasseldroid.BufferInfo;
-import com.iskrembilen.quasseldroid.IrcMessage;
 import com.iskrembilen.quasseldroid.IrcUser;
-import com.iskrembilen.quasseldroid.IrcMessage.Type;
 import com.iskrembilen.quasseldroid.R;
 import com.iskrembilen.quasseldroid.UserCollection;
 import com.iskrembilen.quasseldroid.service.CoreConnService;
@@ -135,7 +110,6 @@ public class NicksActivity extends Activity{
 			}
 		}
 
-		@Override
 		public void update(Observable observable, Object data) {
 			if(data == null) {
 				return;
@@ -152,17 +126,14 @@ public class NicksActivity extends Activity{
 
 		}
 
-		@Override
 		public IrcUser getChild(int groupPosition, int childPosition) {
 			return getGroup(groupPosition).get(childPosition);
 		}
 
-		@Override
 		public long getChildId(int groupPosition, int childPosition) {
 			return groupPosition*10 + childPosition;
 		}
 
-		@Override
 		public View getChildView(int groupPosition, int childPosition,
 				boolean isLastChild, View convertView, ViewGroup parent) {
 
@@ -181,13 +152,11 @@ public class NicksActivity extends Activity{
 			return convertView;
 		}
 
-		@Override
 		public int getChildrenCount(int groupPosition) {
 			if (this.users==null) return 0;
 			return getGroup(groupPosition).size();
 		}
 
-		@Override
 		public List<IrcUser> getGroup(int groupPosition) {
 			switch (groupPosition) {
 			case 0:
@@ -200,17 +169,14 @@ public class NicksActivity extends Activity{
 			return null;
 		}
 
-		@Override
 		public int getGroupCount() {
 			return 3;
 		}
 
-		@Override
 		public long getGroupId(int groupPosition) {
 			return groupPosition;
 		}
 
-		@Override
 		public View getGroupView(int groupPosition, boolean isExpanded,
 				View convertView, ViewGroup parent) {
 			ViewHolderGroup holder = null;
@@ -241,12 +207,10 @@ public class NicksActivity extends Activity{
 			return convertView;
 		}
 
-		@Override
 		public boolean hasStableIds() {
 			return false;
 		}
 
-		@Override
 		public boolean isChildSelectable(int groupPosition, int childPosition) {
 			return false;
 		}

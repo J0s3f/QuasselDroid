@@ -298,8 +298,8 @@ public final class CoreConnection {
 	 */
 	public void connect() throws UnknownHostException, IOException, GeneralSecurityException, CertificateException, NewCertificateException, EmptyQVariantException, UnsupportedProtocolException {	
 		// START CREATE SOCKETS
-		SocketFactory factory = (SocketFactory)SocketFactory.getDefault();
-		socket = (Socket)factory.createSocket(address, port);
+		SocketFactory factory = SocketFactory.getDefault();
+		socket = factory.createSocket(address, port);
 		socket.setKeepAlive(true);
 		outStream = new QDataOutputStream(socket.getOutputStream());
 		// END CREATE SOCKETS
@@ -458,6 +458,7 @@ public final class CoreConnection {
 		}
 
 		TimerTask sendPingAction = new TimerTask() {
+			@Override
 			public void run() {
 				List<QVariant<?>> packedFunc = new LinkedList<QVariant<?>>();
 				packedFunc.add(new QVariant<Integer>(RequestType.HeartBeat.getValue(), QVariantType.Int));
@@ -581,7 +582,7 @@ public final class CoreConnection {
 		inStream.readUInt(32);
 		QVariant <Map<String, QVariant<?>>> v = (QVariant <Map<String, QVariant<?>>>)QMetaTypeRegistry.unserialize(QMetaType.Type.QVariant, inStream);
 
-		Map<String, QVariant<?>>ret = (Map<String, QVariant<?>>)v.getData();
+		Map<String, QVariant<?>>ret = v.getData();
 		//		System.out.println(ret.toString());
 		return ret;
 	}
@@ -594,7 +595,7 @@ public final class CoreConnection {
 		inStream.readUInt(32); // Length
 		QVariant <List<QVariant<?>>> v = (QVariant <List<QVariant<?>>>)QMetaTypeRegistry.unserialize(QMetaType.Type.QVariant, inStream);
 
-		List<QVariant<?>>ret = (List<QVariant<?>>)v.getData();
+		List<QVariant<?>>ret = v.getData();
 		//		System.out.println(ret.toString());
 		return ret;
 	}
@@ -636,6 +637,7 @@ public final class CoreConnection {
 			}
 		};
 
+		@Override
 		public void run() {
 			String errorMessage = null;
 			try {

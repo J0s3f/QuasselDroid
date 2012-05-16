@@ -23,12 +23,10 @@
 
 package com.iskrembilen.quasseldroid.gui;
 
-import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
 
 import android.app.ExpandableListActivity;
-import android.app.ListActivity;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -38,8 +36,6 @@ import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.ResultReceiver;
-import android.preference.Preference;
-import android.preference.Preference.OnPreferenceChangeListener;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.util.TypedValue;
@@ -53,16 +49,13 @@ import android.view.Window;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.View.OnClickListener;
 import android.widget.AdapterView;
-import android.widget.BaseAdapter;
 import android.widget.BaseExpandableListAdapter;
 import android.widget.ExpandableListView;
 import android.widget.ImageView;
-import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 
 import com.iskrembilen.quasseldroid.Buffer;
-import com.iskrembilen.quasseldroid.BufferCollection;
 import com.iskrembilen.quasseldroid.BufferUtils;
 import com.iskrembilen.quasseldroid.Network;
 import com.iskrembilen.quasseldroid.NetworkCollection;
@@ -125,7 +118,6 @@ public class BufferActivity extends ExpandableListActivity {
 		preferences = PreferenceManager.getDefaultSharedPreferences(this);
 		listener =new OnSharedPreferenceChangeListener() {
 
-			@Override
 			public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
 				if(key.equals(getResources().getString(R.string.preference_fontsize_channel_list))){
 					bufferListAdapter.notifyDataSetChanged();
@@ -277,22 +269,18 @@ public class BufferActivity extends ExpandableListActivity {
 			super.notifyDataSetChanged();
 		}
 
-		@Override
 		public void update(Observable observable, Object data) {
 			notifyDataSetChanged();
 		}
 
-		@Override
 		public Buffer getChild(int groupPosition, int childPosition) {
 			return networks.getNetwork(groupPosition).getBuffers().getPos(childPosition);
 		}
 
-		@Override
 		public long getChildId(int groupPosition, int childPosition) {
 			return networks.getNetwork(groupPosition).getBuffers().getPos(childPosition).getInfo().id;
 		}
 
-		@Override
 		public View getChildView(int groupPosition, int childPosition, boolean isLastChild, View convertView, ViewGroup parent) {
 			ViewHolderChild holder = null;
 			if (convertView==null) {
@@ -337,7 +325,6 @@ public class BufferActivity extends ExpandableListActivity {
 			return convertView;
 		}
 
-		@Override
 		public int getChildrenCount(int groupPosition) {
 			if (networks==null) {
 				return 0;
@@ -346,12 +333,10 @@ public class BufferActivity extends ExpandableListActivity {
 			}
 		}
 
-		@Override
 		public Network getGroup(int groupPosition) {
 			return networks.getNetwork(groupPosition);
 		}
 
-		@Override
 		public int getGroupCount() {
 			if (networks==null) {
 				return 0;
@@ -360,12 +345,10 @@ public class BufferActivity extends ExpandableListActivity {
 			}
 		}
 
-		@Override
 		public long getGroupId(int groupPosition) {
 			return networks.getNetwork(groupPosition).getId();
 		}
 
-		@Override
 		public View getGroupView(int groupPosition, boolean isExpanded, View convertView, ViewGroup parent) {
 			ViewHolderGroup holder = null;
 			if (convertView==null) {
@@ -375,7 +358,6 @@ public class BufferActivity extends ExpandableListActivity {
 				holder.statusView.setTextSize(TypedValue.COMPLEX_UNIT_DIP , Float.parseFloat(preferences.getString(getString(R.string.preference_fontsize_channel_list), ""+holder.statusView.getTextSize())));
 				holder.statusView.setOnClickListener(new OnClickListener() {
 
-					@Override
 					public void onClick(View v) {
 						if(getGroup((Integer) v.getTag()).getStatusBuffer() != null)
 							openBuffer(getGroup((Integer) v.getTag()).getStatusBuffer());
@@ -392,12 +374,10 @@ public class BufferActivity extends ExpandableListActivity {
 			return convertView;
 		}
 
-		@Override
 		public boolean hasStableIds() {
 			return true;
 		}
 
-		@Override
 		public boolean isChildSelectable(int groupPosition, int childPosition) {
 			return true;
 		}

@@ -55,6 +55,7 @@ public class BufferInfo {
 	public long groupId;
 	public String name;
 	
+	@Override
 	public String toString() {
 		return name + id + "[" + type.name() + "]";
 	}

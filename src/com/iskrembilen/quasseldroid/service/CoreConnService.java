@@ -31,7 +31,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
@@ -41,12 +40,11 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
-import android.os.PowerManager;
-import android.os.PowerManager.WakeLock;
 import android.os.ResultReceiver;
 import android.preference.PreferenceManager;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
+import android.text.Spanned;
 import android.text.style.BackgroundColorSpan;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
@@ -140,7 +138,6 @@ public class CoreConnService extends Service {
 		preferenceParseColors = preferences.getBoolean(getString(R.string.preference_colored_text), false);
 		preferenceListener = new OnSharedPreferenceChangeListener() {
 			
-			@Override
 			public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
 				if(key.equals(getString(R.string.preference_colored_text))) {
 					preferenceParseColors = preferences.getBoolean(getString(R.string.preference_colored_text), false);
@@ -379,20 +376,20 @@ public class CoreConnService extends Service {
 			if (end - (start + startIndicatorLength) > 0) {
 				// Only set spans if there's any text between start & end
 				if (style == -1) {
-					newString.setSpan(new UnderlineSpan(), start, end, Spannable.SPAN_INCLUSIVE_EXCLUSIVE);
+					newString.setSpan(new UnderlineSpan(), start, end, Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
 				} else {
-					newString.setSpan(new StyleSpan(style), start, end, Spannable.SPAN_INCLUSIVE_EXCLUSIVE);
+					newString.setSpan(new StyleSpan(style), start, end, Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
 				}
 				
 				if (fg != -1) {
 					newString.setSpan(new ForegroundColorSpan(getResources()
 							.getColor(mircCodeToColor(fg))), start, end,
-							Spannable.SPAN_INCLUSIVE_EXCLUSIVE);
+							Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
 				}
 				if (bg != -1) {
 					newString.setSpan(new BackgroundColorSpan(getResources()
 							.getColor(mircCodeToColor(bg))), start, end,
-							Spannable.SPAN_INCLUSIVE_EXCLUSIVE);
+							Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
 				}
 			}
 

@@ -28,6 +28,7 @@ import java.util.Date;
 
 import android.content.Context;
 import android.text.Spannable;
+import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.UnderlineSpan;
 
@@ -98,9 +99,8 @@ public class IrcMessage implements Comparable<IrcMessage>{
 	private ArrayList<String> urls = new ArrayList<String>();
 
 
-	@Override
 	public int compareTo(IrcMessage other) {
-		return ((Integer)messageId).compareTo((Integer)other.messageId);
+		return ((Integer)messageId).compareTo(other.messageId);
 	}
 
 	@Override
@@ -135,8 +135,8 @@ public class IrcMessage implements Comparable<IrcMessage>{
 	public void addURL(Context context, String url) {
 		urls.add(url);
 		int start = content.toString().indexOf(url);
-		content.setSpan(new ForegroundColorSpan(context.getResources().getColor(R.color.ircmessage_url_color)), start, start+url.length(), Spannable.SPAN_INCLUSIVE_EXCLUSIVE);
-		content.setSpan(new UnderlineSpan(), start, start+url.length(), Spannable.SPAN_INCLUSIVE_EXCLUSIVE);
+		content.setSpan(new ForegroundColorSpan(context.getResources().getColor(R.color.ircmessage_url_color)), start, start+url.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
+		content.setSpan(new UnderlineSpan(), start, start+url.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
 	}
 
 	public ArrayList<String> getURLs() {

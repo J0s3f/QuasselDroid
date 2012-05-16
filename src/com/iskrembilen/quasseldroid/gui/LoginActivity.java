@@ -252,7 +252,6 @@ public class LoginActivity extends Activity implements Observer, DialogInterface
 
 			OnClickListener buttonListener = new OnClickListener() {
 
-				@Override
 				public void onClick(View v) {
 					EditText nameField = (EditText)dialog.findViewById(R.id.dialog_name_field);
 					EditText addressField = (EditText)dialog.findViewById(R.id.dialog_address_field);
@@ -441,7 +440,6 @@ public class LoginActivity extends Activity implements Observer, DialogInterface
 		}
 	}
 
-	@Override
 	public void onCancel(DialogInterface dialog) {
 		boundConnService.disconnectFromCore();
 	}

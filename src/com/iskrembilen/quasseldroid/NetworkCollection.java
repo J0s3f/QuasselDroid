@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 
@@ -60,7 +59,6 @@ public class NetworkCollection extends Observable implements Observer {
 		return networkList.size();
 	}
 
-	@Override
 	public void update(Observable observable, Object data) {
 		setChanged();
 		notifyObservers();

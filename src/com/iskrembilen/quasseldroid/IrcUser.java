@@ -36,6 +36,7 @@ public class IrcUser extends Observable implements Comparable<IrcUser>{
 	public List<String> channels = new ArrayList<String>();
 	
 	
+	@Override
 	public String toString(){
 		return nick + " away: " + away + " Num chans: "+ channels.size();
 	}
@@ -46,7 +47,6 @@ public class IrcUser extends Observable implements Comparable<IrcUser>{
 		notifyObservers();
 	}
 
-	@Override
 	public int compareTo(IrcUser another) {
 		return this.nick.compareToIgnoreCase(another.nick);
 	}

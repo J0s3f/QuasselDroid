@@ -421,7 +421,6 @@ public class Buffer extends Observable implements Comparable<Buffer> {
 		this.topMessageShown = topMessageShown;
 	}
 
-	@Override
 	public int compareTo(Buffer another) {
 		return BufferUtils.compareBuffers(this, another);
 	}
