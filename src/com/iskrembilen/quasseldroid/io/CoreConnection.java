@@ -1063,10 +1063,15 @@ public final class CoreConnection {
 						Log.d(TAG, "Sync: Network -> addIrcUser");
 						String nick = (String) packedFunc.remove(0).getData();
 						IrcUser user = new IrcUser();
-						user.nick = nick.substring(0, nick.indexOf("!"));
+						try {
+							// When the Core is connecting to a server, it only sends the bare nicks (instead of in the nick!user@host format)
+							user.nick = nick.substring(0, nick.indexOf("!"));
+						} catch (StringIndexOutOfBoundsException e) {
+							user.nick = nick;
+						}
 						service.getHandler().obtainMessage(R.id.NEW_USER_ADDED, Integer.parseInt(objectName), 0, user).sendToTarget();
 						try {
-							sendInitRequest("IrcUser", objectName+"/" + nick.split("!")[0]);
+							sendInitRequest("IrcUser", objectName+"/" + user.nick);
 						} catch (IOException e) {
 							e.printStackTrace();
 							running = false; // We have obviously lost our connection, just stop this thread.

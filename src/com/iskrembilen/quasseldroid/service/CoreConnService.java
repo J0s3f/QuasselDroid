@@ -26,15 +26,20 @@ package com.iskrembilen.quasseldroid.service;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Hashtable;
 import java.util.Observer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import android.app.Service;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.graphics.Typeface;
+import android.os.BatteryManager;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.Handler;
@@ -50,6 +55,8 @@ import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
 import android.text.style.UnderlineSpan;
 import android.util.Log;
+import android.view.Window;
+import android.view.WindowManager;
 
 import com.iskrembilen.quasseldroid.Buffer;
 import com.iskrembilen.quasseldroid.BufferInfo;
@@ -89,8 +96,54 @@ public class CoreConnService extends Service {
 
 
 
-	private Pattern URLPattern = Pattern.compile("((mailto\\:|(news|(ht|f)tp(s?))\\://){1}\\S+)", Pattern.CASE_INSENSITIVE);
-
+	// The original QuasselDroid URL matching pattern
+	private Pattern nonWebURLPattern = Pattern.compile("((mailto\\:|(news|ftp(s?))\\://){1}\\S+)", Pattern.CASE_INSENSITIVE);
+	
+	// This regular expression string has been copied wholesale from the android.util.Patterns class' WEB_URL constant,
+	// but that class is only available in Android 2.2, but we currently build against 2.1 and I'd really rather not
+	// bump our minimum required version just for ONE CONSTANT... If, at some point in the future, we make 2.2 or
+	// higher the minimum version, we can replace this massive string with the aforementioned WEB_URL constant
+	private Pattern WebURLPattern = Pattern.compile("((?:(http|https|Http|Https|rtsp|Rtsp):\\/\\/(?:(?:[a-zA-Z0-9\\$\\-\\_\\.\\+\\!\\*\\'\\(\\)"
+	        + "\\,\\;\\?\\&\\=]|(?:\\%[a-fA-F0-9]{2})){1,64}(?:\\:(?:[a-zA-Z0-9\\$\\-\\_"
+	        + "\\.\\+\\!\\*\\'\\(\\)\\,\\;\\?\\&\\=]|(?:\\%[a-fA-F0-9]{2})){1,25})?\\@)?)?"
+	        + "((?:(?:[" + "a-zA-Z0-9\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF" + "][" + "a-zA-Z0-9\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF" + "\\-]{0,64}\\.)+"   // named host
+	        + "(?:"
+	                + "(?:aero|arpa|asia|a[cdefgilmnoqrstuwxz])"
+	                + "|(?:biz|b[abdefghijmnorstvwyz])"
+	                + "|(?:cat|com|coop|c[acdfghiklmnoruvxyz])"
+	                + "|d[ejkmoz]"
+	                + "|(?:edu|e[cegrstu])"
+	                + "|f[ijkmor]"
+	                + "|(?:gov|g[abdefghilmnpqrstuwy])"
+	                + "|h[kmnrtu]"
+	                + "|(?:info|int|i[delmnoqrst])"
+	                + "|(?:jobs|j[emop])"
+	                + "|k[eghimnprwyz]"
+	                + "|l[abcikrstuvy]"
+	                + "|(?:mil|mobi|museum|m[acdeghklmnopqrstuvwxyz])"
+	                + "|(?:name|net|n[acefgilopruz])"
+	                + "|(?:org|om)"
+	                + "|(?:pro|p[aefghklmnrstwy])"
+	                + "|qa"
+	                + "|r[eosuw]"
+	                + "|s[abcdeghijklmnortuvyz]"
+	                + "|(?:tel|travel|t[cdfghjklmnoprtvwz])"
+	                + "|u[agksyz]"
+	                + "|v[aceginu]"
+	                + "|w[fs]"
+	                + "|(?:xn\\-\\-0zwm56d|xn\\-\\-11b5bs3a9aj6g|xn\\-\\-80akhbyknj4f|xn\\-\\-9t4b11yi5a|xn\\-\\-deba0ad|xn\\-\\-g6w251d|xn\\-\\-hgbk6aj7f53bba|xn\\-\\-hlcj6aya9esc7a|xn\\-\\-jxalpdlp|xn\\-\\-kgbechtv|xn\\-\\-zckzah)"
+	                + "|y[etu]"
+	                + "|z[amw]))"
+	        + "|(?:(?:25[0-5]|2[0-4]" // or ip address
+	        + "[0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9])\\.(?:25[0-5]|2[0-4][0-9]"
+	        + "|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(?:25[0-5]|2[0-4][0-9]|[0-1]"
+	        + "[0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}"
+	        + "|[1-9][0-9]|[0-9])))"
+	        + "(?:\\:\\d{1,5})?)" // plus option port number
+	        + "(\\/(?:(?:[" + "a-zA-Z0-9\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF" + "\\;\\/\\?\\:\\@\\&\\=\\#\\~"  // plus option query params
+	        + "\\-\\.\\+\\!\\*\\'\\(\\)\\,\\_])|(?:\\%[a-fA-F0-9]{2}))*)?"
+	        + "(?:\\b|$)", Pattern.CASE_INSENSITIVE);
+		
 	private CoreConnection coreConn;
 	private final IBinder binder = new LocalBinder();
 
@@ -107,7 +160,13 @@ public class CoreConnService extends Service {
 
 	private OnSharedPreferenceChangeListener preferenceListener;
 
+	private boolean preferenceKeepScreenOn;
 
+	private boolean onExtPower = false;
+	private Window lastWindowUsed;
+	
+	private Hashtable<Integer, ArrayList<String>> sentMessages = new Hashtable<Integer, ArrayList<String>>();
+	
 	/**
 	 * Class for clients to access. Because we know this service always runs in
 	 * the same process as its clients, we don't need to deal with IPC.
@@ -136,17 +195,48 @@ public class CoreConnService extends Service {
 		notificationManager = new QuasseldroidNotificationManager(this);
 		preferences = PreferenceManager.getDefaultSharedPreferences(this);
 		preferenceParseColors = preferences.getBoolean(getString(R.string.preference_colored_text), false);
+		preferenceKeepScreenOn = preferences.getBoolean(getString(R.string.preference_keep_screen_on), true);
 		preferenceListener = new OnSharedPreferenceChangeListener() {
 			
 			public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
 				if(key.equals(getString(R.string.preference_colored_text))) {
 					preferenceParseColors = preferences.getBoolean(getString(R.string.preference_colored_text), false);
+				} else if(key.equals(getString(R.string.preference_keep_screen_on))) {
+					preferenceKeepScreenOn = preferences.getBoolean(getString(R.string.preference_keep_screen_on), true);
+					clearKeepScreenOnFlag(lastWindowUsed);
+					keepScreenOnIfEnabled(lastWindowUsed);
 				}
 			}
 		};
 		preferences.registerOnSharedPreferenceChangeListener(preferenceListener);
 		statusReceivers = new ArrayList<ResultReceiver>();
+		
+		this.registerReceiver(this.batteryStatusReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
 	}
+	
+
+	private BroadcastReceiver batteryStatusReceiver = new BroadcastReceiver() {
+		@Override
+		public void onReceive(Context context, Intent intent) {
+			if (intent.getAction().equals(Intent.ACTION_BATTERY_CHANGED)) {
+				boolean oldStatus = onExtPower;
+				int newStatus = intent.getIntExtra("status", BatteryManager.BATTERY_STATUS_UNKNOWN);
+				if (newStatus == BatteryManager.BATTERY_STATUS_CHARGING || newStatus == BatteryManager.BATTERY_STATUS_FULL) {
+					if (oldStatus == false) {
+						onExtPower = true;
+						Log.i(TAG, "Now on external power");
+						keepScreenOnIfEnabled(lastWindowUsed);
+					}
+				} else {
+					if (oldStatus == true) {
+						onExtPower = false;
+						Log.i(TAG, "Now on battery power");
+						clearKeepScreenOnFlag(lastWindowUsed);
+					}
+				}
+			}
+		}
+	};
 
 	@Override
 	public void onDestroy() {
@@ -191,9 +281,81 @@ public class CoreConnService extends Service {
 				this);
 	}
 
+	
+	public void keepScreenOnIfEnabled(Window window) {
+		if (window == null)
+			return;
+		
+		lastWindowUsed = window;
+		if (preferenceKeepScreenOn) {
+			Log.i(TAG, "Setting KEEP_SCREEN_ON flag");
+			window.setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON, WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+		}
+	}
+	public void clearKeepScreenOnFlag(Window window) {
+		if (window == null)
+			return;
+		
+		lastWindowUsed = window;
+		Log.i(TAG, "Clearing KEEP_SCREEN_ON flag");
+		window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+	}
 
 	public void sendMessage(int bufferId, String message) {
 		coreConn.sendMessage(bufferId, message);
+		addMessageToSentHistory(bufferId, message);
+	}
+	
+	public void addMessageToSentHistory(int bufferId, String message) {
+		if (message.length() == 0)
+			return;
+		
+		ArrayList<String> sentMessagesForBuffer;
+		if (sentMessages.containsKey(bufferId)) {
+			Log.d(TAG, "Fetched existing sent messages history for Buffer ID #" + bufferId);
+			sentMessagesForBuffer = sentMessages.get(bufferId);
+		} else {
+			Log.d(TAG, "Creating new sent messages history for Buffer ID #" + bufferId);
+			sentMessagesForBuffer = new ArrayList<String>();
+			sentMessages.put(bufferId, sentMessagesForBuffer);
+		}
+		
+		if (sentMessagesForBuffer.size() == 0 || !message.equals(sentMessagesForBuffer.get(sentMessagesForBuffer.size()-1))) {
+			// Don't add the message if it's already the last in the list
+			Log.d(TAG, "Adding message to history: " + message);
+			sentMessagesForBuffer.add(message);
+		}
+		
+		// Should probably do some size-limiting of the history, here...
+	}
+	
+	public String getSentMessage(int bufferId, int messageOffset) {
+		Log.d(TAG, "Requested sent message for buffer #" + bufferId + " with offset " + messageOffset);
+		if (!sentMessages.containsKey(bufferId) || messageOffset >= 0)
+			return null;
+		
+		ArrayList<String> sentMessagesForBuffer = sentMessages.get(bufferId);
+		if (sentMessagesForBuffer.size() < -messageOffset) {
+			// Requesting a message that doesn't exist
+			return null;
+		}
+		
+		String out = sentMessagesForBuffer.get(sentMessagesForBuffer.size() + messageOffset);
+		Log.d(TAG, "Returning sent message: " + out);
+		return out;
+	}
+	
+	public void changeMessageInSentHistory(int bufferId, int messageOffset, String message) {
+		Log.d(TAG, "Changing sent message for buffer #" + bufferId + " with offset " + messageOffset + " to string: " + message);
+		if (!sentMessages.containsKey(bufferId) || messageOffset >= 0 || message.length() == 0)
+			return;
+		
+		ArrayList<String> sentMessagesForBuffer = sentMessages.get(bufferId);
+		if (sentMessagesForBuffer.size() < -messageOffset) {
+			return;
+		}
+		
+		sentMessagesForBuffer.set(sentMessagesForBuffer.size() + messageOffset, message);
 	}
 
 	public void markBufferAsRead(int bufferId) {
@@ -242,7 +404,7 @@ public class CoreConnService extends Service {
 	 *            the message to check
 	 */
 	public void checkMessageForHighlight(Buffer buffer, IrcMessage message) {
-		if (message.type == IrcMessage.Type.Plain) {
+		if (message.type == IrcMessage.Type.Plain || message.type == IrcMessage.Type.Action) {
 			String nick = networks.getNetworkById(buffer.getInfo().networkId).getNick();
 			if(nick == null) {
 				Log.e(TAG, "Nick is null in check message for highlight");
@@ -265,9 +427,16 @@ public class CoreConnService extends Service {
 	 *            ircmessage to check
 	 */
 	public void checkForURL(IrcMessage message) {
-		Matcher matcher = URLPattern.matcher(message.content);
-		if (matcher.find()) {
-			message.addURL(this, matcher.group(0));
+		// First look for "Web" URLs
+		Matcher webMatcher = WebURLPattern.matcher(message.content);
+		while (webMatcher.find()) {
+			message.addURL(this, webMatcher.group());
+		}
+
+		// Now check for things like FTP, News, Mailto, IRC, etc.
+		Matcher miscMatcher = nonWebURLPattern.matcher(message.content);
+		while (miscMatcher.find()) {
+			message.addURL(this, miscMatcher.group());
 		}
 	}
 
@@ -480,7 +649,7 @@ public class CoreConnService extends Service {
 	}
 
 	public boolean isConnected() {
-		return coreConn.isConnected();
+		return coreConn != null && coreConn.isConnected();
 	}
 
 	/**
@@ -686,7 +855,11 @@ public class CoreConnService extends Service {
 				ArrayList<Integer> b = ((Bundle)msg.obj).getIntegerArrayList("buffers");
 				ArrayList<Integer> c = new ArrayList<Integer>();
 				for(Network net : networks.getNetworkList()) {
-					c.add(net.getStatusBuffer().getInfo().id);
+					try {
+						c.add(net.getStatusBuffer().getInfo().id);
+					} catch (NullPointerException ex) {
+						// Not connected; never been connected; thus no status buffer
+					}
 					for(Buffer buf : net.getBuffers().getRawBufferList()) {
 						if(buf.getInfo().id == 4) System.out.println(buf.getInfo().name);
 						c.add(buf.getInfo().id);
@@ -785,11 +958,11 @@ public class CoreConnService extends Service {
 				}
 				bundle = (Bundle) msg.obj;
 				user = networks.getNetworkById(msg.arg1).getUserByNick(bundle.getString("oldNick"));
-				if (user == null) {
-					System.err.println("Unable to find user " + bundle.getString("oldNick"));
-					return;
+
+				if (user != null) {
+					user.changeNick(bundle.getString("newNick"));
 				}
-				user.changeNick(bundle.getString("newNick"));
+
 				break;
 			case R.id.USER_ADD_MODE:
 				if (networks.getNetworkById(msg.arg1) == null) {
@@ -813,12 +986,15 @@ public class CoreConnService extends Service {
 				}
 				bundle = (Bundle) msg.obj;
 				bufferName = bundle.getString("channel");
-				user = networks.getNetworkById(msg.arg1).getUserByNick(bundle.getString("nick"));
-				for(Buffer buf : networks.getNetworkById(msg.arg1).getBuffers().getRawBufferList()) {
-						if(buf.getInfo().name.equals(bufferName)) {
-							buf.getUsers().removeUserMode(user, bundle.getString("mode"));
-							break;
-						}
+				Network network = networks.getNetworkById(msg.arg1); 
+				if (network != null) {
+					user = network.getUserByNick(bundle.getString("nick"));
+					for(Buffer buf : networks.getNetworkById(msg.arg1).getBuffers().getRawBufferList()) {
+							if(buf.getInfo().name.equals(bufferName)) {
+								buf.getUsers().removeUserMode(user, bundle.getString("mode"));
+								break;
+							}
+					}
 				}
 				break;
 			}			

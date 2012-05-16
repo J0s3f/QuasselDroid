@@ -36,6 +36,66 @@ public class NetworkCollection extends Observable implements Observer {
 		return null;
 	}
 	
+	public Buffer getPreviousBufferFromId(int bufferId, boolean incStatus) {
+		Buffer last = null;
+		boolean foundCurrent = false;
+		for (int i=networkList.size()-1; i>=0; i--) {
+			List<Buffer> bufList = networkList.get(i).getBuffers().getRawFilteredBufferList();
+			for (int ii=bufList.size()-1; ii>=0; ii--) {
+				Buffer buf = bufList.get(ii);
+				
+				if (last == null)
+					last = buf;
+				
+				if (foundCurrent)
+					return buf;
+				
+				if (buf.getInfo().id == bufferId)
+					foundCurrent = true;
+			}
+			
+			if (incStatus) {
+				Buffer status = networkList.get(i).getStatusBuffer();
+				if (last == null)
+					last = status;
+				
+				if (foundCurrent)
+					return status;
+			}
+		}
+
+		// Still not found it but we're at the start of the list, so return the last buffer
+		return last;
+	}
+	
+	public Buffer getNextBufferFromId(int bufferId, boolean incStatus) {
+		Buffer first = null;
+		boolean foundCurrent = false;
+		for (Network network : networkList) {
+			if (first == null && incStatus)
+				first = network.getStatusBuffer();
+			
+			if (network.getStatusBuffer().getInfo().id == bufferId) {
+				if (incStatus && foundCurrent)
+					return network.getStatusBuffer();
+				foundCurrent = true;
+			}
+			
+			for (Buffer buf : network.getBuffers().getRawFilteredBufferList()) {
+				if (first == null)
+					first = buf;
+				
+				if (foundCurrent)
+					return buf;
+				
+				if (buf.getInfo().id == bufferId)
+					foundCurrent = true;
+			}
+		}
+		
+		return first;
+	}
+	
 	public Network getNetworkById(int networkId) {
 		return networkMap.get(networkId);
 	}

@@ -1,4 +1,4 @@
-/*
+ /*
     QuasselDroid - Quassel client for Android
  	Copyright (C) 2011 Ken Børge Viktil
  	Copyright (C) 2011 Magnus Fjell
@@ -23,15 +23,25 @@
 
 package com.iskrembilen.quasseldroid.gui;
 
+import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.app.ProgressDialog;
+import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnMultiChoiceClickListener;
@@ -46,10 +56,14 @@ import android.os.IBinder;
 import android.os.ResultReceiver;
 import android.preference.PreferenceManager;
 import android.util.Log;
+import android.view.GestureDetector;
+import android.view.GestureDetector.SimpleOnGestureListener;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnKeyListener;
 import android.view.ViewGroup;
@@ -63,6 +77,9 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import com.loopj.android.http.*;
 
 import com.iskrembilen.quasseldroid.Buffer;
 import com.iskrembilen.quasseldroid.BufferInfo;
@@ -77,9 +94,9 @@ public class ChatActivity extends Activity{
 
 
 	public static final int MESSAGE_RECEIVED = 0;
-	private static final String BUFFER_ID_EXTRA = "bufferid";
-	private static final String BUFFER_NAME_EXTRA = "buffername";
 
+	public static final String IMGUR_DEVELOPER_KEY = "3b809e186ddf9c91f4c0905fd5891ba8";
+	
 	private BacklogAdapter adapter;
 	private ListView backlogList;
 
@@ -89,6 +106,11 @@ public class ChatActivity extends Activity{
 	SharedPreferences preferences;
 
 	private ResultReceiver statusReceiver;
+	
+	private int sentMessageHistoryViewIndex = 0;
+	private String sentMessageHistoryLastRequestedMessage = "";
+	
+	private static String storedInputText = "";
 
 	private static final String TAG = ChatActivity.class.getSimpleName();
 
@@ -117,6 +139,113 @@ public class ChatActivity extends Activity{
 		backlogList.setOnItemLongClickListener(itemLongClickListener);
 		((ListView) findViewById(R.id.chatBacklogList)).setCacheColorHint(0xffffff);
 
+        backlogList.setOnTouchListener(gestureListener);
+        
+        Intent intent = getIntent();
+        CharSequence sharedString = intent.getCharSequenceExtra(BufferActivity.BUFFER_SHARE_EXTRA_TEXT);
+        Uri sharedUri = (Uri) intent.getParcelableExtra(BufferActivity.BUFFER_SHARE_EXTRA_IMAGE);
+        if (sharedString != null && sharedString.length() > 0) {
+        	((EditText) findViewById(R.id.ChatInputView)).setText(sharedString);
+        } else if (sharedUri != null && sharedUri.toString().length() > 0) {
+        	try {
+    		ContentResolver cr = getContentResolver();
+    		final InputStream is = cr.openInputStream(sharedUri);
+    		
+        	new AlertDialog.Builder(this)
+	            .setIcon(android.R.drawable.ic_dialog_alert)
+	            .setTitle("Proceed with Image Upload?")
+	            .setMessage("Your shared image will first be uploaded to Imgur. Do you wish to proceed?")
+	            .setPositiveButton("Yes; Upload Image", new DialogInterface.OnClickListener() {
+	                @Override
+	                public void onClick(DialogInterface dialog, int which) {
+	                	
+	                	AsyncHttpClient client = new AsyncHttpClient();
+	                	
+	                	RequestParams params = new RequestParams();
+	                	params.put("image", is);
+	                	
+		                client.post(ChatActivity.this, "http://api.imgur.com/2/upload.json?key=" + IMGUR_DEVELOPER_KEY, params, new JsonHttpResponseHandler() {
+	                		ProgressDialog waitDialog;
+	                		
+	                	    @Override
+	                	    public void onSuccess(JSONObject json) {
+	                	    	waitDialog.hide();
+	                	    	
+	    	                	try {
+			                	    Log.d(TAG, "JSON Response: " + json.toString());
+			                	    String imgurUrl = json.getJSONObject("upload").getJSONObject("links").getString("imgur_page");
+			                	    
+			                	    EditText inputView = (EditText) findViewById(R.id.ChatInputView);
+			                	    if (inputView.getText().length() > 0) {
+			                	    	if (inputView.getText().charAt(inputView.getText().length() - 1) != ' ') {
+			                	    		inputView.append(" ");
+			                	    	}
+			                	    }
+		                	    	inputView.append(imgurUrl);
+	    	                	} catch (JSONException ex) {
+	    	                		Log.e(TAG, "Shared Media JSONException: " + ex.getMessage());
+	    						}
+	                	    }
+	                	    
+	                	    private void runInBackground() {
+	                	    	waitDialog.hide();
+	                	    	Toast backgroundInfo = Toast
+	                	    			.makeText(ChatActivity.this, "Resulting Imgur URL will be inserted into the input area when the upload completes.", Toast.LENGTH_LONG);
+	                	    	backgroundInfo.setGravity(Gravity.TOP, 0, 0);
+	                	    	backgroundInfo.show();
+	                	    }
+	                	    
+	                	    @Override
+	                	    public void onStart() {
+	                	    	Log.d(TAG, "AysncHttpClient Start");
+	                	    	
+	                	    	waitDialog = new ProgressDialog(ChatActivity.this);
+	                	    	waitDialog.setIndeterminate(true);
+	                	    	waitDialog.setMessage("Image uploading; please wait...");
+	                	    	waitDialog.setCancelable(true);
+	                	    	waitDialog.setCanceledOnTouchOutside(true);
+	                	    	waitDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
+									@Override
+									public void onCancel(DialogInterface arg0) {
+										runInBackground();
+									}
+								});
+	                	    	waitDialog.setButton("Run in Background", new DialogInterface.OnClickListener() {
+	                	    		@Override
+	                	    		public void onClick(DialogInterface dialog, int which) {
+	                	    			runInBackground();
+	                	    		}
+	                	    	});
+	                	    	waitDialog.show();
+	                	    }
+	                	    
+	                	    @Override
+	                	    public void onFailure(Throwable e) {
+	                	    	Log.d(TAG, "AysncHttpClient Failed: " + e.getMessage());
+	                	    	waitDialog.hide();
+	                	    	
+	                	    	new AlertDialog.Builder(ChatActivity.this)
+	                	    		.setIcon(android.R.drawable.ic_dialog_alert)
+	                	    		.setTitle("Upload Failed!")
+	                	    		.setMessage("Uploading your image failed with this error: " + e.getMessage())
+	                	    		.show();
+	                	    }
+	                	    
+	                	    @Override
+	                	    public void onFinish() {
+	                	    	Log.d(TAG, "AysncHttpClient Finished");
+	                	    	waitDialog.hide();
+	                	    }
+	                	});
+	                }
+	            })
+	            .setNegativeButton("Cancel", null)
+	            .show();
+        	} catch (FileNotFoundException ex) {
+        		Log.e(TAG, "Shared Media FileNotFoundException: " + ex.getMessage());
+        	}
+        }
+
 		statusReceiver = new ResultReceiver(null) {
 
 			@Override
@@ -128,19 +257,50 @@ public class ChatActivity extends Activity{
 		};
 	}
 
+	public static void readBytesFromInputStreamIntoBAOS(InputStream is, ByteArrayOutputStream byteBuffer) throws IOException {
+		byte[] buffer = new byte[1024];
+
+		int len = 0;
+		while ((len = is.read(buffer)) != -1) {
+		    byteBuffer.write(buffer, 0, len);
+		}
+	}
 
 	OnItemLongClickListener itemLongClickListener = new OnItemLongClickListener() {
 
+		private void openUrl(String url) {
+			try {
+				if (url.indexOf("://") == -1) {
+					// We match URLs without a scheme, assuming them to be HTTP, but Android requires a scheme to be present
+					url = "http://" + url;
+				}
+				
+				Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+				startActivity(browserIntent);
+			} catch (ActivityNotFoundException ex) {
+				Toast.makeText(ChatActivity.this, "No handler found for that URL.", Toast.LENGTH_SHORT).show();
+			}
+		}
+		
+		@Override
 		public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
 			IrcMessage message = adapter.getItem(position);
 			if (message.hasURLs()) {
-				ArrayList<String> urls = message.getURLs();
+				final ArrayList<String> urls = (ArrayList<String>) message.getURLs();
 
 				if (urls.size() == 1 ){ //Open the URL
-					Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(urls.get(0)));
-					startActivity(browserIntent);
+					openUrl(urls.get(0));
 				} else if (urls.size() > 1 ){
-					//Show list of urls, and make it possible to choose one
+					//Show list of URLs, and make it possible to choose one
+					AlertDialog.Builder urlListBuilder = new AlertDialog.Builder(ChatActivity.this);
+					final CharSequence[] urlArray = urls.toArray(new CharSequence[urls.size()]);
+					urlListBuilder.setItems(urlArray, new DialogInterface.OnClickListener() {
+						public void onClick(DialogInterface dialog, int selectedUrl) {
+							openUrl(urls.get(selectedUrl));
+						}
+					});
+					AlertDialog urlList = urlListBuilder.create();
+					urlList.show();
 				}
 			}
 			return false;
@@ -149,12 +309,15 @@ public class ChatActivity extends Activity{
 
 	private OnKeyListener inputfieldKeyListener =  new View.OnKeyListener() {
 		public boolean onKey(View v, int keyCode, KeyEvent event) {
+			int bufferId = adapter.buffer.getInfo().id;
+			
 			if (keyCode == KeyEvent.KEYCODE_ENTER && event.getAction()==KeyEvent.ACTION_DOWN ) { //On key down as well
 				EditText inputfield = (EditText)findViewById(R.id.ChatInputView);
 				String inputText = inputfield.getText().toString();
 
 				if ( ! "".equals(inputText) ) {
-					boundConnService.sendMessage(adapter.buffer.getInfo().id, inputText);
+					boundConnService.sendMessage(bufferId, inputText);
+					sentMessageHistoryViewIndex = 0;
 					inputfield.setText("");
 				}
 
@@ -162,11 +325,110 @@ public class ChatActivity extends Activity{
 			} else if (keyCode == KeyEvent.KEYCODE_TAB && event.getAction() == KeyEvent.ACTION_DOWN) {
 				onSearchRequested(); // lawl
 				return true;
+			} else if (keyCode == KeyEvent.KEYCODE_DPAD_UP && event.getAction() == KeyEvent.ACTION_DOWN) {
+				String oldMessage = boundConnService.getSentMessage(bufferId, --sentMessageHistoryViewIndex);
+				if (oldMessage == null) {
+					++sentMessageHistoryViewIndex;
+					sentMessageHistoryLastRequestedMessage = "";
+				} else {
+					EditText inputfield = (EditText) findViewById(R.id.ChatInputView);
+					if (inputfield.getText().length() > 0 && sentMessageHistoryViewIndex == -1) {
+						// This is our first move into the history, so store the existing message in the list;
+						boundConnService.addMessageToSentHistory(bufferId, inputfield.getText().toString());
+					} else if (sentMessageHistoryViewIndex < -1 && inputfield.getText().length() > 0 &&
+							!sentMessageHistoryLastRequestedMessage.equals(inputfield.getText().toString())) {
+						// The message in the text box has been modified, so we'd better save that, too
+						boundConnService.changeMessageInSentHistory(bufferId, sentMessageHistoryViewIndex + 1, inputfield.getText().toString());
+					}
+					inputfield.setText(oldMessage);
+					sentMessageHistoryLastRequestedMessage = oldMessage;
+				}
+				return true;
+			} else if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN && event.getAction() == KeyEvent.ACTION_DOWN) {
+				EditText inputfield = (EditText) findViewById(R.id.ChatInputView);
+				if (inputfield.getText().length() > 0 && sentMessageHistoryViewIndex == 0) {
+					// Pressing down when not already viewing the history causes the current message
+					//  to be sent to the history and the input area to be blanked
+					boundConnService.addMessageToSentHistory(bufferId, inputfield.getText().toString());
+					inputfield.setText("");
+				} else {
+					if (!sentMessageHistoryLastRequestedMessage.equals(inputfield.getText().toString())) {
+						// The message in the text box has been modified, so we'd better save that
+						boundConnService.changeMessageInSentHistory(bufferId, sentMessageHistoryViewIndex, inputfield.getText().toString());
+					}
+					
+					String oldMessage = boundConnService.getSentMessage(bufferId, ++sentMessageHistoryViewIndex);
+					if (oldMessage == null) {
+						// Reached the "bottom" (most recent) of the list
+						inputfield.setText("");
+						sentMessageHistoryViewIndex = 0;
+						sentMessageHistoryLastRequestedMessage = "";
+					} else {
+						inputfield.setText(oldMessage);
+					}
+				}
+				return true;
 			}
 			return false;
 		}
 	};
-
+	
+	private void switchToBuffer(Buffer buffer) {
+		if (buffer == null)
+			return;
+		
+		Intent i = new Intent(ChatActivity.this, ChatActivity.class);
+		i.putExtra(BufferActivity.BUFFER_ID_EXTRA, buffer.getInfo().id);
+		i.putExtra(BufferActivity.BUFFER_NAME_EXTRA, buffer.getInfo().name);
+		
+		startActivity(i);
+	}
+	
+	class FlingXListener extends SimpleOnGestureListener {
+		private static final double SWIPE_MIN_DISTANCE = 0.05; // as a fraction of window width
+		private static final double SWIPE_THRESHOLD_VELOCITY = 1.0; // as a fraction of window width
+		
+		@Override
+		public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+			View chatBacklogListView = findViewById(R.id.chatBacklogList);
+			if (chatBacklogListView == null) {
+				return false;
+			}
+			
+			int width = chatBacklogListView.getWidth();
+			double deltaX = (e2.getX() - e1.getX()) / width;
+			double deltaY = (e2.getY() - e1.getY()) / chatBacklogListView.getHeight();
+			double velocityFraction = Math.abs(velocityX) / width;
+			
+			if (Math.abs(deltaY) > Math.abs(deltaX)) {
+            	// Moved more vertically than horizontally...
+                return false;
+            }
+			
+            if (velocityFraction >= SWIPE_THRESHOLD_VELOCITY) {
+				if (deltaX < 0 && -deltaX > SWIPE_MIN_DISTANCE) {
+					// Swiped from right to left
+					Buffer nextBuffer = boundConnService.getNetworkList(null).getNextBufferFromId(adapter.getBufferId(), false);
+					switchToBuffer(nextBuffer);
+				} else if (deltaX > 0 && deltaX > SWIPE_MIN_DISTANCE) {
+					// Swiped from left to right
+					Buffer prevBuffer = boundConnService.getNetworkList(null).getPreviousBufferFromId(adapter.getBufferId(), false);
+					switchToBuffer(prevBuffer);
+				}
+            }
+			return false;
+		}
+	}
+	private GestureDetector flingDetector = new GestureDetector(new FlingXListener());
+    
+	View.OnTouchListener gestureListener = new View.OnTouchListener() {
+        public boolean onTouch(View v, MotionEvent event) {
+            if (flingDetector.onTouchEvent(event)) {
+                return true;
+            }
+            return false;
+        }
+    };
 
 	//TODO: fix this again after changing from string to ircusers
 	//Nick autocomplete when pressing the search-button
@@ -236,6 +498,27 @@ public class ChatActivity extends Activity{
 		dynamicBacklogAmout = Integer.parseInt(preferences.getString(getString(R.string.preference_dynamic_backlog), "10"));
 		doBindService();
 	}
+	
+	@Override
+	protected void onResume() {
+		super.onResume();
+		
+		EditText inputArea = (EditText) findViewById(R.id.ChatInputView);
+		if (storedInputText.length() > 0 && inputArea.getText().toString().length() == 0) {
+			inputArea.setText(storedInputText);
+		}
+		
+		if (boundConnService != null) {
+			boundConnService.keepScreenOnIfEnabled(getWindow());
+		}
+	}
+	
+	@Override
+	protected void onPause() {
+		super.onPause();
+		
+		storedInputText = ((EditText) findViewById(R.id.ChatInputView)).getText().toString();
+	}
 
 	@Override
 	protected void onStop() {
@@ -299,8 +582,8 @@ public class ChatActivity extends Activity{
 	
 	private void openNickList(Buffer buffer) {
 		Intent i = new Intent(ChatActivity.this, NicksActivity.class);
-		i.putExtra(BUFFER_ID_EXTRA, buffer.getInfo().id);
-		i.putExtra(BUFFER_NAME_EXTRA, buffer.getInfo().name);
+		i.putExtra(BufferActivity.BUFFER_ID_EXTRA, buffer.getInfo().id);
+		i.putExtra(BufferActivity.BUFFER_NAME_EXTRA, buffer.getInfo().name);
 		startActivity(i);
 	}
 

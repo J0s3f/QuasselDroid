@@ -17,6 +17,12 @@
 	<CheckBoxPreference android:key="@string/preference_colored_text"
 			android:title="Allow colored text" android:summary="NB: buggy feature, turning off might stop crashes" 
 			android:defaultValue="true" />
+	
+	<PreferenceCategory android:title="Power Management">
+		<CheckBoxPreference android:key="@string/preference_keep_screen_on"
+			android:title="Keep screen on when powered" android:summary="Keep the screen turned on (and bright) while your device is connected to an external power source" 
+			android:defaultValue="false" />
+	</PreferenceCategory>
 
 
 	<PreferenceCategory android:title="Notifications">

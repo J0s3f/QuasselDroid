@@ -3,26 +3,34 @@
   	<uses-sdk android:minSdkVersion="7" />
   	<uses-permission android:name="android.permission.VIBRATE"></uses-permission>
   	<uses-permission android:name="android.permission.INTERNET"></uses-permission>
+    <uses-permission android:name="android.permission.WAKE_LOCK"></uses-permission>
   	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"></uses-permission>
 	<application android:icon="@drawable/icon" android:label="@string/app_name" android:description="@string/description" android:theme="@android:style/Theme.Light">
-
-
 
 		<activity android:name=".gui.LoginActivity" android:label="@string/app_name" android:windowSoftInputMode="stateHidden">
 			<intent-filter>
 				<action android:name="android.intent.action.MAIN" />
 				<category android:name="android.intent.category.LAUNCHER" />
 			</intent-filter>
+            <intent-filter android:icon="@drawable/icon48">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter android:icon="@drawable/icon48">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
 		</activity>
 
 		<activity android:name=".gui.PreferenceView"
 			android:screenOrientation="sensor" android:label="@string/app_name" android:theme="@android:style/Theme">
 		</activity>
-		
-		<activity android:name=".gui.ChatActivity" android:configChanges="keyboardHidden|orientation"></activity>
+		<activity android:name=".gui.ChatActivity" android:configChanges="keyboardHidden|orientation"
+			android:noHistory="true" android:windowSoftInputMode="stateHidden"></activity>
 		<activity android:name=".gui.BufferActivity" android:launchMode="singleTop"></activity>
 		<service android:name=".service.CoreConnService"></service>
 		<activity android:name=".gui.NicksActivity"></activity>
 	</application>
-
 </manifest> 

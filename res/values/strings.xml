@@ -33,6 +33,7 @@
 	<string name="description">An Android-based client for the decentralized
 		Quassel IRC client.</string>
 	<string name="menu_hide_events">Hide Events</string>
+	<string name="preference_keep_screen_on">keepscreenon</string>
 	<string name="nick_list_header">Nicks</string>
 	<string name="notification_connecting">Connecting to core</string>
 	<string name="preference_notify_connect">notifyconnect</string>

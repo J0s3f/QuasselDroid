@@ -33,6 +33,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.ResultReceiver;
@@ -54,6 +55,7 @@ import android.widget.ExpandableListView;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
+import android.widget.Toast;
 
 import com.iskrembilen.quasseldroid.Buffer;
 import com.iskrembilen.quasseldroid.BufferUtils;
@@ -68,6 +70,8 @@ public class BufferActivity extends ExpandableListActivity {
 
 	public static final String BUFFER_ID_EXTRA = "bufferid";
 	public static final String BUFFER_NAME_EXTRA = "buffername";
+	public static final String BUFFER_SHARE_EXTRA_TEXT = "buffersharetxt";
+	public static final String BUFFER_SHARE_EXTRA_IMAGE = "buffershareimg";
 
 	private static final String ITEM_POSITION_KEY = "itempos";
 
@@ -82,6 +86,9 @@ public class BufferActivity extends ExpandableListActivity {
 
 	private int restoreListPosition = 0;
 	private int restoreItemPosition = 0;
+	
+	private CharSequence sharedString;
+	private Uri sharedUri;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -109,6 +116,12 @@ public class BufferActivity extends ExpandableListActivity {
 				}else if(resultCode==CoreConnService.INIT_DONE) {
 					setListAdapter(bufferListAdapter);
 					bufferListAdapter.setNetworks(boundConnService.getNetworkList(bufferListAdapter));
+					handleIntent(getIntent());
+					boundConnService.keepScreenOnIfEnabled(getWindow());
+				} else if (resultCode==CoreConnService.CONNECTION_CONNECTED) {
+					if (boundConnService.isInitComplete()) {
+						handleIntent(getIntent());
+					}
 				}
 				super.onReceiveResult(resultCode, resultData);
 			}
@@ -132,6 +145,47 @@ public class BufferActivity extends ExpandableListActivity {
 	protected void onResume() {
 		super.onResume();
 		if (boundConnService == null) return;
+		
+		boundConnService.keepScreenOnIfEnabled(getWindow());
+	}
+	
+	@Override
+	protected void onPause() {
+		super.onPause();
+
+		// Leaving the activity for whatever reason, so clear the shared data
+		sharedString = null;
+		sharedUri = null;
+	}
+	
+	private void handleIntent(Intent intent) {
+		sharedString = null;
+		sharedUri = null;
+		
+        try {
+        	Bundle extras = intent.getExtras();
+    		if (extras.containsKey(Intent.EXTRA_TEXT)) {
+    			sharedString = intent.getCharSequenceExtra(Intent.EXTRA_TEXT);
+    		} else if (extras.containsKey(BufferActivity.BUFFER_SHARE_EXTRA_TEXT)) {
+    			sharedString = intent.getCharSequenceExtra(BufferActivity.BUFFER_SHARE_EXTRA_TEXT);
+    		} else if (extras.containsKey(BufferActivity.BUFFER_SHARE_EXTRA_IMAGE)) {
+    			sharedUri = intent.getParcelableExtra(BufferActivity.BUFFER_SHARE_EXTRA_IMAGE);
+    		}
+
+	    	if (sharedString != null && sharedString.length() > 0) {
+	            Toast.makeText(BufferActivity.this, "Select a channel/query to which to send your shared message...", Toast.LENGTH_LONG).show();
+	    	} else if (sharedUri != null && sharedUri.toString().length() > 0) {
+	    		Toast.makeText(BufferActivity.this, "Select a channel/query to which to send your shared image...", Toast.LENGTH_LONG).show();
+	    	}
+	        setIntent(new Intent(Intent.ACTION_DEFAULT));
+	    } catch (Exception e) {
+        	Log.e(TAG, "Intent Exception: " + e.getMessage());
+	    }
+	}
+	
+	@Override
+	protected void onNewIntent(Intent intent) {
+		handleIntent(intent);
 	}
 
 	@Override
@@ -237,6 +291,8 @@ public class BufferActivity extends ExpandableListActivity {
 		Intent i = new Intent(BufferActivity.this, ChatActivity.class);
 		i.putExtra(BUFFER_ID_EXTRA, buffer.getInfo().id);
 		i.putExtra(BUFFER_NAME_EXTRA, buffer.getInfo().name);
+		i.putExtra(BUFFER_SHARE_EXTRA_TEXT, sharedString);
+		i.putExtra(BUFFER_SHARE_EXTRA_IMAGE, sharedUri);
 		startActivity(i);
 	}
 
@@ -407,7 +463,7 @@ public class BufferActivity extends ExpandableListActivity {
 	 * Code for service binding:
 	 */
 	private CoreConnService boundConnService;
-	private Boolean isBound;
+	private Boolean isBound = false;
 
 	private ServiceConnection mConnection = new ServiceConnection() {
 		public void onServiceConnected(ComponentName className, IBinder service) {
