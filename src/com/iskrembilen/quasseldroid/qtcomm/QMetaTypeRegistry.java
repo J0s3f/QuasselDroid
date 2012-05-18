@@ -166,7 +166,7 @@ public class QMetaTypeRegistry {
 			}
 		}
 	}
-	public static QMetaTypeRegistry instance(){
+	public static synchronized QMetaTypeRegistry instance(){
 		if(singleton==null){
 			singleton = new QMetaTypeRegistry();
 		}
