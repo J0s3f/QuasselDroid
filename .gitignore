@@ -2,4 +2,3 @@ bin/*
 gen/*
 
 /.settings/org.eclipse.jdt.core.prefs
-/project.properties
