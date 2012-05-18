@@ -49,6 +49,7 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Message;
@@ -369,6 +370,7 @@ public final class CoreConnection {
 			TrustManager[] trustManagers = new TrustManager [] { new CustomTrustManager(this) };
 			sslContext.init(null, trustManagers, null);
 			SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
+
 			SSLSocket sslSocket = (SSLSocket) sslSocketFactory.createSocket(socket, address, port, true);
 			sslSocket.setEnabledProtocols(new String[] {"SSLv3"});
 
@@ -665,7 +667,10 @@ public final class CoreConnection {
 				return null;
 			} catch (IOException e) {
 				if(e.getCause() instanceof NewCertificateException) {
-					service.getHandler().obtainMessage(R.id.INVALID_CERTIFICATE, ((NewCertificateException)e.getCause()).hashedCert()).sendToTarget();					
+					service.getHandler().obtainMessage(R.id.INVALID_CERTIFICATE, ((NewCertificateException)e.getCause()).hashedCert()).sendToTarget();
+					//store hash of new certificate
+					//TODO: Add GUI
+					service.getSharedPreferences("CertificateStorage", Context.MODE_PRIVATE).edit().putString("certificate", ((NewCertificateException)e.getCause()).hashedCert()).commit();
 					disconnect();
 				}else{
 					e.printStackTrace();

@@ -41,8 +41,6 @@ import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.os.Parcel;
-import android.os.Parcelable;
 import android.os.ResultReceiver;
 import android.util.Log;
 import android.view.Menu;
